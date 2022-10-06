@@ -1,0 +1,19 @@
+DEVELOPING
+
+- Add Product route and template --2
+- Single product template allowing user to edit and delete product, use pencil icon --3
+- Create Bill routes and templates(add search functionality with dropdown for search) --4
+- Bill page --5
+- Insert Stock routes and templates --6
+
+DESIGNING
+
+- Improve designing on all products page and single product page --1
+- Create Home Page --7
+- Responsiveness --8
+
+FUTURE
+
+- Authentication and authorisation to allow multiple users to use it
+- Have multiple users for same list of products providing different level of authorisation
+For ex- one user cannot access delete and update routes(cashier) while other can(owner)

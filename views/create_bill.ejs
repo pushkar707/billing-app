@@ -1,0 +1,283 @@
+<%- include('header.ejs') -%>
+
+<style>
+    .product-search{
+        width: fit-content;
+        margin: 55px auto;
+    }
+
+    .form-control{
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        text-transform: capitalize;
+    }
+
+    .form-control:focus{
+        outline: none;
+    }
+
+    .button{
+        padding: 6px 12px;
+        font-size: 16px;
+        line-height: 1.5;
+        border-radius: 3px;
+        border: 1px solid blanchedalmond;
+        background-color: #007bff;
+        color: white;
+        font-family: 'Roboto',sans-serif;
+    }
+
+    #search-name{
+        width: 550px;
+    }
+    #search-qty{
+        width: 47px;
+    }
+
+    .search{
+        position: relative;
+        display: inline-block;
+    }
+
+    #name-select{
+        display: none;
+        position: absolute;
+        width: 576px;
+        top: 37px;
+        left: 0;
+        padding: 0;
+        border: none;
+    }
+    .option{
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        /* border-bottom: 1px solid black; */
+    }
+
+    .bill-table{
+        margin: auto;
+        width: 700px;
+        max-width: 90vw;
+        border-collapse: collapse;
+    }
+
+    .bill-item{
+        border-bottom: 1px solid #808080ba;
+        border-top: 1px solid #808080ba;
+        text-align: center;
+    }
+
+    .bill-item td,th{
+        padding: 11px 4px;
+    }
+
+    #print-btn{
+        width: 100%;
+        margin: 10px;
+        display: none;
+    }
+</style>
+<!-- <h1 class="heading">Create Bill</h1> -->
+<div class="product-search">
+    <form id="search-form" method="post" action="" autocomplete="off">
+        <div class="search">
+            <input name="name" for="name-select" type="text" id="search-name" class="form-control" placeholder="Enter product to search" required>
+            <select id="name-select" class="form-control">
+                <option value="">Hello</option>
+            </select>
+        </div>
+        <input name="qty" step=".05" type="number" id="search-qty" class="form-control" placeholder="Qty." min="0" required>
+        <button id="search-add" class="button">Add</button>    
+    </form>
+</div>
+
+<div id="print-bill" style="width: fit-content; margin: auto;">
+    <table class="bill-table">
+        <tr class="bill-item">
+            <th>SNo.</th>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Amount</th>
+            <th></th>
+        </tr>
+    </table>
+    <button onclick="billSubmit()" class="button" id="print-btn">Print Bill</button>
+</div>
+
+<form action="/bill/update?_method=PUT" method="post" id="update-products" style="display: none;">
+</form>
+
+<script>
+    // GETTING ALL PRODUCTS FROM BACKEND AND CONVERTING INTO USABLE FORMAT
+    var products = '<%= JSON.stringify(products) %>';
+    products = products.replace('[','')
+    products = products.replace(']','')
+    products = products.split('},')
+
+    key_values = []
+    products.forEach(product => {
+        var product = product.split('&#34;')
+        product = product.join('')
+        key_values.push(product.split(':'))
+    });
+
+    var newVals = []
+    key_values.forEach((key_val)=>{
+        var newVal = []
+        key_val.forEach((key)=>{
+            key_val = key.split(',')
+            newVal.push(...key_val)
+        })
+        newVals.push(newVal)
+    })
+
+    myProducts = []
+
+    newVals.forEach((val)=>{
+        myProduct = {}
+        index = 0
+        val.forEach((value)=>{
+            // value = value.replace('{','')
+            // value = value.replace('}','')
+            myProduct[val[index]] = val[index+1] 
+            index+=2
+        })
+        myProducts.push(myProduct)
+    })
+    products = myProducts
+    console.log(products);
+
+    // CREATING FUNCTIONALITY TO CREATE A DROPOWN MENU WHILE USER SEARCHS FOR A PRODUCT
+    const searchInput = document.getElementById('search-name')
+    const names = document.getElementById('name-select')
+
+    searchInput.addEventListener('input',()=>{
+        names.innerHTML = ''
+        curr_products = []
+        products.forEach((product)=>{
+            if(product.name.includes(searchInput.value.charAt(0).toUpperCase()+ searchInput.value.slice(1))){
+                curr_products.push(product)
+            }
+        })
+        // console.log(curr_products);
+        curr_products.forEach((product)=>{
+            names.innerHTML+=`<option class="option" value='${product.name}'>${product.name}&ensp;&#8377;${product.price}/${product.pricePer}</option>`
+        })
+        if(curr_products.length>1){
+            names.style.display = 'unset'
+            names.size = curr_products.length
+        }else if(curr_products.length==1){
+            names.style.display = 'unset'
+            names.innerHTML+=`<option class="option" disabled></option>`
+            names.size = curr_products.length+1
+        }else{
+            names.style.display='none'
+        }
+        // console.log(names.value);
+    })
+    // const option = document.querySelector('.option')
+    
+    names.addEventListener('click',()=>{
+        // names.size = 1
+        names.style.display = 'none'
+        searchInput.value = names.value
+    })
+
+
+    // Adding products into bill and also inserting data into invisible form
+    const searchForm = document.getElementById('search-form')
+    const billTable = document.querySelector('.bill-table')
+    const updateProducts = document.getElementById('update-products')
+    const printBtn = document.getElementById('print-btn')
+
+    let itemNo = 1
+    let total = 0
+    let totalRow = null
+    searchForm.addEventListener('submit',(e)=>{
+        e.preventDefault()
+        const name = searchForm.elements[0].value
+        const qty = searchForm.elements[2].value
+        totalRow = document.getElementById('total-row')
+        if(totalRow){totalRow.remove()}
+        
+        products.find((product)=>{
+            if(product.name == name){
+                printBtn.style.display = 'unset'
+                product.quantity -= qty
+                total+=product.price*qty
+                billTable.innerHTML+=`
+                <tr class="bill-item" id='${product['{_id']}'>
+                    <td class="item-no">${itemNo}</td>
+                    <td>${product.name}</td>
+                    <td>&#8377;${product.price}/${product.pricePer}</td>
+                    <td>${qty} ${product.pricePer}s</td>
+                    <td>&#8377;${product.price*qty}</td>
+                    <td onclick=removeItem('${product['{_id']}',${product.price*qty}) style="color:red;cursor:pointer;">remove</td>
+                </tr>
+                `
+                updateProducts.innerHTML+=`
+                <input type="hidden" name="${product['{_id']}" value=${product.quantity} id="${product['{_id']}-input">
+                `
+                itemNo += 1
+            }
+        })
+        billTable.innerHTML+=`
+        <tr class="bill-item" id="total-row">
+            <th colspan="4">Total</th>
+            <th>&#8377;${total}</th>
+        </tr>
+        `
+        searchInput.value = ''
+    })
+    
+    const billSubmit = () => {
+        updateProducts.submit()
+        printDiv('print-bill')
+    }
+
+    // To add remove button on each bill item
+    const removeItem = (id,amount) => {
+        document.getElementById(id).remove()
+        document.getElementById(`${id}-input`).remove()
+        total = total-amount
+        const billTotal = document.getElementById('total-row')
+        billTotal.innerHTML = `
+            <th colspan="4">Total</th>
+            <th>&#8377;${total}</th>
+        `
+        if(total == 0){
+            printBtn.style.display = 'none'
+            billTotal.style.display = 'none'
+        }
+        itemNo = 1
+        const itemNos = document.querySelectorAll('.item-no')
+        itemNos.forEach((item)=>{
+            item.innerHTML = itemNo
+            itemNo+=1
+        })
+    }
+
+    // TO PRINT BILL
+    function printDiv(divName) {
+        printBtn.style.display = 'none'
+        var printContents = document.getElementById(divName).innerHTML;
+        var originalContents = document.body.innerHTML;
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+    }
+</script>
+<%- include('footer.ejs') -%>

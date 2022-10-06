@@ -1,0 +1,16 @@
+<%- include('header') -%>
+<h1 class="heading" style="margin-bottom: 15px;"><%= category %></h1>
+<div class="products" style="margin-left: 40px;">
+    <% products.forEach(product => { %>
+    <% if (product.category === category) { %>
+        <div class="product">
+            <b><a href="/product/<%= product._id %>"><p>
+                <%= product.name %> <i class="fas fa-xs fa-regular fa-arrow-up-right-from-square"></i>
+            </p></a></b>
+            <p>Quantity: <%= product.quantity %> <%= product.pricePer %>s</p>
+            <p>Price: <%= product.price %>/<%= product.pricePer %></p>
+        </div>
+    <% } %>
+    <% }) %>
+</div>
+<%- include('footer') -%>
